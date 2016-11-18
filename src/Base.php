@@ -5,6 +5,7 @@ namespace Rokka\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use Psr\Http\Message\ResponseInterface;
+use GuzzleHttp\Exception\ClientException;
 
 /**
  * Base Client class.
@@ -67,12 +68,13 @@ abstract class Base
      * @param string $path             Path on the API
      * @param array  $options          Request options
      * @param bool   $needsCredentials True if credentials are needed
+     * @param int     $retryCount       How many times did we retry this
      *
      * @return ResponseInterface
      *
      * @throws GuzzleException
      */
-    protected function call($method, $path, array $options = [], $needsCredentials = true)
+    protected function call($method, $path, array $options = [], $needsCredentials = true, $retryCount = 0)
     {
         $options['headers'][self::API_VERSION_HEADER] = $this->apiVersion;
 
@@ -80,6 +82,19 @@ abstract class Base
             $options['headers'][self::API_KEY_HEADER] = $this->credentials['key'];
         }
 
-        return $this->client->request($method, $path, $options);
+        try {
+            return $this->client->request($method, $path, $options);
+        } catch (ClientException $e) {
+            /* if the server responded with a 429 Too Many Requests
+             * retry for max. 10 times and wait longer with each time
+             * Accounts to total 110 seconds
+             */
+            if ($e->getCode() == 429 && $retryCount < 10) {
+                $retryCount++;
+                sleep($retryCount * 2);
+                return $this->call($method, $path, $options, $needsCredentials, $retryCount);
+            }
+            throw $e;
+        }
     }
 }
