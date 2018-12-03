@@ -6,6 +6,11 @@ This project tries to follow [Semantic Versioning](http://semver.org/) since the
 
 This document mainly describes API changes important to users of this library.
 
+## 1.9.0 - unreleased
+
+* added public `\Rokka\Client\Image::copySourceImages($hashes, $destinationOrg, $overwrite = true, $sourceOrg = '')`
+  to copy multiple images at once (max 100). Improves performance a lot.
+
 ## 1.8.0 - 2018-11-05
 
 * Added an object for the new dynamic metadata "version". 
